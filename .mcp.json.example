@@ -1,0 +1,9 @@
+{
+  "_comment": "Copy this file to .mcp.json and adjust the paths for your machine. 'command' must point at a Python 3.10+ interpreter; 'args' at this project's server.py. Absolute paths are the most reliable.",
+  "mcpServers": {
+    "thinkcell": {
+      "command": "python",
+      "args": ["server.py"]
+    }
+  }
+}

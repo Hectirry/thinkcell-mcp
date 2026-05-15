@@ -1,0 +1,8 @@
+# think-cell MCP server dependencies.
+# Install with: python -m pip install -r requirements.txt
+
+# Official Model Context Protocol SDK (FastMCP + stdio transport).
+mcp[cli]>=1.27.1
+
+# think-cell JSON data automation library: builds the .ppttc structure.
+thinkcell>=21.10.12

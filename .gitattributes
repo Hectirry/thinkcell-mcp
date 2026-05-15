@@ -1,0 +1,5 @@
+# Store text files with LF in the repository regardless of contributor OS.
+* text=auto eol=lf
+
+# PowerPoint files are binary.
+*.pptx binary

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thinkcell-mcp"
+version = "0.1.0"
+description = "MCP server that wraps think-cell's .ppttc JSON automation to build PowerPoint charts and decks from plain data."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Hector Vargas" }]
+keywords = ["mcp", "think-cell", "powerpoint", "pptx", "charts", "automation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Office/Business",
+]
+dependencies = [
+    "mcp[cli]>=1.27.1",
+    "thinkcell>=21.10.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/Hectirry/thinkcell-mcp"
+Issues = "https://github.com/Hectirry/thinkcell-mcp/issues"
+
+[tool.setuptools]
+py-modules = ["server", "autodeck", "converter", "validator", "diagnostics"]
+
+[tool.setuptools.packages.find]
+include = ["charts*"]

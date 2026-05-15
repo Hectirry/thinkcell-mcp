@@ -1,0 +1,31 @@
+# --- Generated output (always reproducible by re-running the tools) ---
+output/*
+!output/.gitkeep
+
+# --- think-cell's automation template ---
+# Copied from the user's own licensed think-cell install on first use.
+# Not redistributed with this project.
+templates/*.pptx
+!templates/.gitkeep
+
+# --- Local / personal files (not part of the published project) ---
+template.pptx
+*.ppttc
+~$*
+.mcp.json
+agents aztec.md
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
