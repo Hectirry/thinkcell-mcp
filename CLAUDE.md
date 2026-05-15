@@ -37,6 +37,14 @@
 
 <!-- Agrega nuevas entradas arriba de esta línea. -->
 
+- **2026-05-15 — Re-branding de la plantilla sin romper la automatización:** el
+  logo de think-cell es una imagen `<p:pic>` *visible* en `slideMaster1.xml`;
+  sus datos van en `<p:pic>` *ocultos* (`hidden="1"`, tamaño 0). Los colores de
+  los gráficos salen de los 6 acentos de `theme1.xml`. Ambos son partes
+  estándar de PowerPoint, separadas de los nombres think-cell (que viven en un
+  blob LiteDB en los tags). **Por qué importa:** `branding.py` puede quitar el
+  logo (borrar `<p:pic>` no ocultos del master) y recolorear (reescribir los
+  acentos) sin tocar la automatización. El `fill` por serie sigue mandando.
 - **2026-05-15 — Plantilla oficial sin-setup `thinkcell_auto.pptx`:** think-cell
   instala su propia plantilla de automatización con elementos ya nombrados
   (`SlideTitle`, `LeftChartTitle`, `RightChartTitle`, `LeftChart`,
@@ -71,13 +79,14 @@
 
 ## Qué es este proyecto
 
-Servidor MCP que expone **7 herramientas** sobre stdio:
+Servidor MCP que expone **8 herramientas** sobre stdio:
 
 | Herramienta | Propósito |
 | --- | --- |
 | `create_chart` | Construir un `.ppttc` para un solo gráfico. |
 | `build_presentation` | Combinar varios gráficos/slides en un `.ppttc`. |
 | `create_auto_deck` | Construir un deck multi-slide SIN preparar template. |
+| `set_deck_branding` | Recolorear la plantilla auto-deck y quitar el logo. |
 | `convert_to_pptx` | Ejecutar `ppttc.exe` para producir el `.pptx`. |
 | `validate_ppttc` | Validar estructuralmente un documento `.ppttc`. |
 | `list_chart_types` | Describir cada tipo de gráfico soportado. |
@@ -97,6 +106,10 @@ la lógica de negocio no es probabilística y debe ser consistente:
   el JSON directamente (no usa la librería `thinkcell`, que no expone celdas
   `date`/`percentage`/`fill`) y usa la plantilla oficial incluida
   `templates/thinkcell_auto.pptx`, resuelta de forma absoluta.
+- **`branding.py`** — re-tematiza la plantilla auto-deck (`set_deck_branding`):
+  reescribe los 6 colores de acento del tema y quita el logo de think-cell del
+  slide master. Solo toca partes estándar de PowerPoint; no afecta los
+  elementos nombrados de think-cell.
 - **`charts/`** — un módulo por tipo de gráfico. Cada uno subclasea
   `ChartBuilder` (`charts/base.py`): valida la entrada para ese tipo y produce
   el par `(categories, series)` que espera la librería `thinkcell`.
@@ -129,8 +142,9 @@ nombres no coinciden, `ppttc.exe` corre pero no actualiza nada.
 
 ```
 Thinkcell/
-  server.py          7 herramientas MCP (FastMCP, stdio)
+  server.py          8 herramientas MCP (FastMCP, stdio)
   autodeck.py        constructor de .ppttc sin-setup (create_auto_deck)
+  branding.py        re-tematiza la plantilla auto-deck (set_deck_branding)
   converter.py       wrapper de ppttc.exe
   validator.py       validación estructural de .ppttc
   diagnostics.py     diagnóstico del entorno think-cell

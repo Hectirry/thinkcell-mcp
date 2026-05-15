@@ -1,12 +1,13 @@
 """think-cell MCP server.
 
-Exposes seven tools over stdio for building think-cell JSON automation
+Exposes eight tools over stdio for building think-cell JSON automation
 (``.ppttc``) files and converting them to PowerPoint (``.pptx``) with
 think-cell's ``ppttc.exe``:
 
     * create_chart       -- build a single-chart .ppttc file
     * build_presentation -- combine many charts/slides into one .ppttc file
     * create_auto_deck   -- build a multi-slide .ppttc with NO template setup
+    * set_deck_branding  -- recolour the auto-deck template / drop the logo
     * convert_to_pptx    -- run ppttc.exe to produce a .pptx
     * validate_ppttc     -- structurally validate a .ppttc document
     * list_chart_types   -- describe every supported chart type
@@ -30,7 +31,8 @@ from charts import (
     get_builder,
     write_ppttc_document,
 )
-from autodeck import build_auto_deck
+from autodeck import AUTO_TEMPLATE_PATH, build_auto_deck, ensure_auto_template
+from branding import apply_branding
 from converter import convert_ppttc
 from diagnostics import run_diagnostics
 from validator import validate_ppttc_data
@@ -413,6 +415,51 @@ def create_auto_deck(
         converted straight away with ``convert_to_pptx`` -- no manual step.
     """
     return build_auto_deck(slides, output_name)
+
+
+@mcp.tool()
+def set_deck_branding(
+    accent_colors: list[str] | None = None,
+    remove_logo: bool = True,
+) -> dict[str, Any]:
+    """Re-brand the template that ``create_auto_deck`` uses.
+
+    think-cell's automation template ships with think-cell's own logo (top
+    right of every slide) and a green/blue accent palette. This tool rewrites
+    that bundled template -- once -- so every future ``create_auto_deck`` deck
+    inherits your colours and drops the logo. It only touches standard
+    PowerPoint parts (theme + slide master); the named think-cell elements are
+    left intact, so automation keeps working.
+
+    By default the template is already de-branded on first use (logo removed,
+    a professional Big-Four-inspired palette applied). Call this tool to set a
+    custom palette or to toggle the logo.
+
+    Args:
+        accent_colors: Up to six ``#RRGGBB`` hex colours for the chart accent
+            palette (theme accent1..accent6). When omitted, a professional
+            blue-anchored default palette is applied. Per-series ``fill``
+            values in ``create_auto_deck`` still override these per series.
+        remove_logo: When True (default) the think-cell logo is removed from
+            the slide master.
+
+    Returns:
+        ``{"success": bool, "template": str, "accents": list[str],
+        "logo_removed": bool, "errors": list[str]}``.
+    """
+    if not ensure_auto_template():
+        return {
+            "success": False,
+            "template": str(AUTO_TEMPLATE_PATH),
+            "accents": [],
+            "logo_removed": False,
+            "errors": [
+                "The think-cell automation template is not available. Run "
+                "create_auto_deck once, or install think-cell, so the "
+                "template can be obtained first."
+            ],
+        }
+    return apply_branding(AUTO_TEMPLATE_PATH, accent_colors, remove_logo)
 
 
 @mcp.tool()

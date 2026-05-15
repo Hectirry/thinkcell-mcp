@@ -12,6 +12,7 @@ think-cell's `ppttc.exe`.
 | `create_chart` | Build a `.ppttc` file for a single chart. |
 | `build_presentation` | Combine many charts/slides into one `.ppttc` file. |
 | `create_auto_deck` | Build a multi-slide `.ppttc` deck with **no template setup**. |
+| `set_deck_branding` | Recolour the auto-deck template and drop the think-cell logo. |
 | `convert_to_pptx` | Run `ppttc.exe` to turn a `.ppttc` into a `.pptx`. |
 | `validate_ppttc` | Structurally validate a `.ppttc` document. |
 | `list_chart_types` | Describe every supported chart type. |
@@ -135,6 +136,17 @@ the first time `create_auto_deck` runs. Its five named elements are fixed:
 The user never opens PowerPoint or names anything — they just supply data.
 Each slide becomes one `.ppttc` entry (one slide). The resulting `.ppttc` can
 be handed straight to `convert_to_pptx`.
+
+### Branding
+
+think-cell's template carries think-cell's own logo and a green/blue accent
+palette. On first use the bundled copy is **automatically de-branded** — the
+logo is removed and a professional, blue-anchored palette (drawn from the
+Big Four firms' brand colours) is applied. Both live in standard PowerPoint
+parts (the theme and the slide master), not in the named think-cell elements,
+so re-skinning never affects automation. Use **`set_deck_branding`** to apply
+your own accent colours or to toggle the logo. Per-series `fill` values in
+`create_auto_deck` still override the palette for individual series.
 
 ## Tool reference and examples
 
@@ -283,7 +295,26 @@ Returns `{"success": true, "ppttc_path": "...", "slide_count": 1,
 structured validation errors. `output_name` is optional (default
 `auto_deck`); the `.ppttc` is written to the `output/` folder.
 
-### 4. `convert_to_pptx`
+### 4. `set_deck_branding`
+
+Re-brand the template that `create_auto_deck` uses. Rewrites the bundled
+template's theme accent palette and removes the think-cell logo — once — so
+every future deck inherits it. Only standard PowerPoint parts are touched;
+named think-cell elements are left intact.
+
+```json
+{
+  "accent_colors": ["#00338D", "#0091DA", "#86BC25", "#E88D14", "#797878", "#FFDB00"],
+  "remove_logo": true
+}
+```
+
+`accent_colors` takes up to six `#RRGGBB` colours (theme accent1..accent6);
+omit it to apply the default Big-Four-inspired palette. Returns
+`{"success": true, "template": "...", "accents": [...], "logo_removed": bool,
+"errors": []}`.
+
+### 5. `convert_to_pptx`
 
 Run `ppttc.exe` to produce a `.pptx`. Internally runs:
 `ppttc.exe <input.ppttc> -o <output.pptx>`.
@@ -300,7 +331,7 @@ or a structured error (missing input, `ppttc.exe` not found, non-zero exit,
 timeout). `output_path` is optional and defaults to the input path with a
 `.pptx` extension.
 
-### 5. `validate_ppttc`
+### 6. `validate_ppttc`
 
 Structurally validate a `.ppttc` document. Pass either `ppttc_path` or
 `ppttc_json`.
@@ -315,7 +346,7 @@ Returns `{"valid": true, "errors": []}`, or `valid: false` with a list of
 problems (bad JSON, missing `template`/`data`/`name`/`table`, malformed
 cells, inconsistent row widths, ...).
 
-### 6. `list_chart_types`
+### 7. `list_chart_types`
 
 No input. Returns every supported chart type with its required/optional
 parameters, the expected data shape, and a ready-to-use example:
@@ -334,7 +365,7 @@ parameters, the expected data shape, and a ready-to-use example:
 }
 ```
 
-### 7. `diagnose_thinkcell`
+### 8. `diagnose_thinkcell`
 
 Explain why think-cell automation isn't working. Runs read-only Windows
 registry and filesystem checks — no processes are launched. `template_path`
@@ -405,6 +436,7 @@ Call `list_chart_types` for the exact rules and an example per type.
 thinkcell-mcp/
   server.py            MCP server entry point (FastMCP, stdio transport)
   autodeck.py          zero-setup .ppttc builder (powers create_auto_deck)
+  branding.py          re-themes the auto-deck template (set_deck_branding)
   converter.py         ppttc.exe wrapper with structured error handling
   validator.py         .ppttc JSON structural validation
   diagnostics.py       think-cell environment diagnostics (registry/files)

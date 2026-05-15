@@ -12,9 +12,16 @@ needs Windows + think-cell + PowerPoint). Exits non-zero if any check fails.
 from __future__ import annotations
 
 import json
+import re
 import sys
 
 from autodeck import AUTO_TEMPLATE_PATH, build_auto_deck
+from branding import (
+    DEFAULT_ACCENTS,
+    apply_branding,
+    recolor_theme_xml,
+    strip_logo_from_master,
+)
 from charts import CHART_BUILDERS, chart_type_catalog, get_builder
 from charts.area import AreaChart
 from charts.bar import BarChart
@@ -540,6 +547,68 @@ def test_autodeck() -> None:
     )
 
 
+# --------------------------------------------------------------------------
+# branding: re-theme the auto-deck template
+# --------------------------------------------------------------------------
+def test_branding() -> None:
+    check("branding: 6 default accent colours", len(DEFAULT_ACCENTS) == 6)
+    check(
+        "branding: default accents are #RRGGBB hex",
+        all(re.fullmatch(r"#[0-9A-Fa-f]{6}", c) for c in DEFAULT_ACCENTS),
+    )
+
+    # recolor_theme_xml swaps accent srgbClr values, leaves others intact.
+    theme = (
+        '<a:accent1><a:srgbClr val="111111"/></a:accent1>'
+        '<a:accent2><a:srgbClr val="222222"/></a:accent2>'
+        '<a:accent3><a:srgbClr val="333333"/></a:accent3>'
+    )
+    recoloured = recolor_theme_xml(theme, ["AABBCC", "DDEEFF"])
+    check("branding: accent1 recoloured", 'val="AABBCC"' in recoloured)
+    check("branding: accent2 recoloured", 'val="DDEEFF"' in recoloured)
+    check(
+        "branding: accent not in palette is left intact",
+        'val="333333"' in recoloured,
+    )
+
+    # strip_logo_from_master drops visible pics, keeps hidden data shapes.
+    master = (
+        '<p:pic><p:nvPicPr><p:cNvPr id="1" name="Picture 4"/>'
+        "</p:nvPicPr></p:pic>"
+        '<p:pic><p:nvPicPr><p:cNvPr id="2" name="data" hidden="1"/>'
+        "</p:nvPicPr></p:pic>"
+    )
+    stripped = strip_logo_from_master(master)
+    check(
+        "branding: visible logo picture removed",
+        'name="Picture 4"' not in stripped,
+    )
+    check(
+        "branding: hidden think-cell data shape kept",
+        'name="data"' in stripped,
+    )
+
+    # apply_branding validates colours before touching any file.
+    bad_hex = apply_branding("does_not_exist.pptx", accents=["nothex"])
+    check("branding: invalid hex rejected", not bad_hex["success"])
+    check(
+        "branding: invalid hex error is descriptive",
+        has(bad_hex["errors"], "hex colour"),
+    )
+    check(
+        "branding: more than 6 accents rejected",
+        not apply_branding(
+            "does_not_exist.pptx", accents=["#000000"] * 7
+        )["success"],
+    )
+    check(
+        "branding: missing template file reported",
+        has(
+            apply_branding("does_not_exist.pptx")["errors"], "not found"
+        ),
+    )
+
+
 def main() -> int:
     suites = [
         test_registry,
@@ -553,6 +622,7 @@ def main() -> int:
         test_validator,
         test_validator_percentage,
         test_autodeck,
+        test_branding,
     ]
     for suite in suites:
         suite()

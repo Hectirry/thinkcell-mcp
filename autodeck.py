@@ -67,9 +67,20 @@ def ensure_auto_template() -> bool:
         try:
             AUTO_TEMPLATE_PATH.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(_INSTALL_TEMPLATE, AUTO_TEMPLATE_PATH)
-            return AUTO_TEMPLATE_PATH.is_file()
         except OSError:
             return False
+        if not AUTO_TEMPLATE_PATH.is_file():
+            return False
+        # De-brand on first copy: drop think-cell's logo and apply the
+        # default professional palette. Best-effort -- the template is still
+        # usable (just with think-cell's own styling) if this fails.
+        try:
+            from branding import apply_branding
+
+            apply_branding(AUTO_TEMPLATE_PATH)
+        except Exception:  # noqa: BLE001 - branding must never block usage
+            pass
+        return True
     return False
 
 # Named think-cell elements present in the bundled template.
