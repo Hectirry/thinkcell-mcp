@@ -81,6 +81,59 @@ section of your Claude configuration, adjusting the paths for your machine.
 servers, add only the inner `"thinkcell": { ... }` entry. Restart Claude
 after editing the config.
 
+## Quickstart
+
+The fastest end-to-end flow needs **no PowerPoint template setup**:
+`create_auto_deck` builds the `.ppttc` against think-cell's bundled official
+template, and `convert_to_pptx` renders the finished `.pptx`.
+
+**1. Build a `.ppttc` with `create_auto_deck`** — one slide with a title, a
+left chart and a right chart, each with its own title:
+
+```json
+{
+  "output_name": "Quickstart",
+  "slides": [
+    {
+      "slide_title": "Quarterly Review",
+      "left_title": "Market share",
+      "right_title": "Orders",
+      "left_chart": {
+        "categories": ["Q1", "Q2", "Q3"],
+        "series": [
+          {"name": "Our brand", "values": [52, 54, 57]},
+          {"name": "Competitor", "values": [21, 20, 18]}
+        ]
+      },
+      "right_chart": {
+        "categories": ["Q1", "Q2", "Q3"],
+        "series": [
+          {"name": "Delivered", "values": [740, 760, 805]}
+        ]
+      }
+    }
+  ]
+}
+```
+
+Chart `categories` accept **either** plain string labels like `"Q1"` (a
+category axis) **or** ISO dates `"YYYY-MM-DD"` (a date axis) — the axis kind
+is auto-detected. This call returns a `ppttc_path` in the `output/` folder.
+
+**2. Render the `.pptx` with `convert_to_pptx`** — pass the `ppttc_path` from
+step 1:
+
+```json
+{
+  "ppttc_path": "C:\\Users\\you\\thinkcell-mcp\\output\\Quickstart.ppttc"
+}
+```
+
+**Result:** a finished PowerPoint deck (`Quickstart.pptx`) with real
+think-cell charts — no template preparation and no manual element naming.
+
+See *Tool reference and examples* below for every option of each tool.
+
 ## How think-cell automation works
 
 think-cell's automation does **not** create charts from nothing. The flow is:
@@ -130,8 +183,8 @@ the first time `create_auto_deck` runs. Its five named elements are fixed:
 | `SlideTitle` | Slide title text field. |
 | `LeftChartTitle` | Title above the left chart. |
 | `RightChartTitle` | Title above the right chart. |
-| `LeftChart` | Left chart — date axis, `percentage` series. |
-| `RightChart` | Right chart — date axis, `number` series. |
+| `LeftChart` | Left chart — date or category axis, `percentage` series. |
+| `RightChart` | Right chart — date or category axis, `number` series. |
 
 The user never opens PowerPoint or names anything — they just supply data.
 Each slide becomes one `.ppttc` entry (one slide). The resulting `.ppttc` can
@@ -243,10 +296,12 @@ Build a multi-slide `.ppttc` deck **without preparing or naming any
 template** — it always uses the bundled `templates/thinkcell_auto.pptx`
 (see *Zero-setup decks* above). Every slide has the same fixed layout: a
 slide title, plus a left chart and a right chart, each with its own title.
-All fields are optional, but every slide must carry at least one. Both charts
-use a **date axis** (categories are ISO dates `"YYYY-MM-DD"`); the left chart
-renders `percentage` values, the right chart renders plain `number` values.
-Each slide becomes one `.ppttc` entry (one slide).
+All fields are optional, but every slide must carry at least one. Each chart's
+`categories` may be **either** ISO dates `"YYYY-MM-DD"` (producing a **date
+axis**) **or** plain string labels like `"Q1"` (producing a **category
+axis**) — the axis kind is auto-detected per chart. The left chart renders
+`percentage` values, the right chart renders plain `number` values. Each slide
+becomes one `.ppttc` entry (one slide).
 
 Input schema — `slides` is a non-empty list of slide objects:
 
@@ -258,8 +313,9 @@ Input schema — `slides` is a non-empty list of slide objects:
 | `left_chart` | object | optional — left chart (`percentage` values) |
 | `right_chart` | object | optional — right chart (`number` values) |
 
-A chart object has `categories` (non-empty list of ISO date strings) and
-`series` (non-empty list of series objects). Each series object has `name`
+A chart object has `categories` (a non-empty list of either ISO date strings
+`"YYYY-MM-DD"` for a date axis, or plain string labels for a category axis)
+and `series` (non-empty list of series objects). Each series object has `name`
 (string), `values` (list of numbers, one per category) and an optional
 `fill` (hex colour like `"#ff0000"` applied to every point of that series).
 
