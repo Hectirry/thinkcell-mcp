@@ -218,21 +218,6 @@ def build_auto_deck(
         ``{"success": bool, "ppttc_path": str | None, "slide_count": int,
         "template": str, "errors": list[str]}``.
     """
-    if not ensure_auto_template():
-        return {
-            "success": False,
-            "ppttc_path": None,
-            "slide_count": 0,
-            "template": str(AUTO_TEMPLATE_PATH),
-            "errors": [
-                "Could not obtain the think-cell automation template. It is "
-                f"copied on first use from your think-cell install at "
-                f"'{_INSTALL_TEMPLATE}'. Install think-cell, set the "
-                "THINKCELL_DIR environment variable if it lives elsewhere, "
-                f"or place the template manually at '{AUTO_TEMPLATE_PATH}'."
-            ],
-        }
-
     if not isinstance(slides, list) or len(slides) == 0:
         return {
             "success": False,
@@ -301,6 +286,23 @@ def build_auto_deck(
             "slide_count": 0,
             "template": template,
             "errors": errors,
+        }
+
+    # Input is valid -- now make sure the template file is actually available
+    # (copied from the local think-cell install on first use).
+    if not ensure_auto_template():
+        return {
+            "success": False,
+            "ppttc_path": None,
+            "slide_count": 0,
+            "template": template,
+            "errors": [
+                "Could not obtain the think-cell automation template. It is "
+                f"copied on first use from your think-cell install at "
+                f"'{_INSTALL_TEMPLATE}'. Install think-cell, set the "
+                "THINKCELL_DIR environment variable if it lives elsewhere, "
+                f"or place the template manually at '{AUTO_TEMPLATE_PATH}'."
+            ],
         }
 
     out_path = OUTPUT_DIR / f"{_safe_filename(output_name, 'auto_deck')}.ppttc"

@@ -15,7 +15,7 @@ import json
 import re
 import sys
 
-from autodeck import AUTO_TEMPLATE_PATH, build_auto_deck
+from autodeck import AUTO_TEMPLATE_PATH, build_auto_deck, ensure_auto_template
 from branding import (
     DEFAULT_ACCENTS,
     apply_branding,
@@ -440,55 +440,76 @@ def _sample_slide() -> dict:
 
 
 def test_autodeck() -> None:
-    check(
-        "autodeck: bundled template ships with the project",
-        AUTO_TEMPLATE_PATH.is_file(),
-    )
+    # The deck-building checks need the think-cell template; on a machine
+    # without think-cell (e.g. CI) it cannot be obtained, so skip just those.
+    # The input-validation checks below do not need a template and run always.
+    if ensure_auto_template():
+        check(
+            "autodeck: bundled template is available",
+            AUTO_TEMPLATE_PATH.is_file(),
+        )
+        result = build_auto_deck(
+            [_sample_slide(), _sample_slide()], "test_deck"
+        )
+        check("autodeck: valid two-slide deck succeeds", result["success"])
+        check(
+            "autodeck: slide_count reflects 2 slides",
+            result["slide_count"] == 2,
+        )
+        check(
+            "autodeck: ppttc written to output/ folder",
+            bool(result["ppttc_path"])
+            and result["ppttc_path"].endswith("test_deck.ppttc"),
+        )
 
-    result = build_auto_deck([_sample_slide(), _sample_slide()], "test_deck")
-    check("autodeck: valid two-slide deck succeeds", result["success"])
-    check("autodeck: slide_count reflects 2 slides", result["slide_count"] == 2)
-    check(
-        "autodeck: ppttc written to output/ folder",
-        bool(result["ppttc_path"])
-        and result["ppttc_path"].endswith("test_deck.ppttc"),
-    )
+        # The generated .ppttc must itself pass structural validation.
+        document = json.loads(
+            open(result["ppttc_path"], encoding="utf-8").read()
+        )
+        check(
+            "autodeck: each slide is its own .ppttc entry",
+            isinstance(document, list) and len(document) == 2,
+        )
+        check(
+            "autodeck: generated .ppttc passes the validator",
+            validate_ppttc_data(document)["valid"],
+        )
+        names = {el["name"] for el in document[0]["data"]}
+        check(
+            "autodeck: uses the bundled named elements",
+            names == {"SlideTitle", "LeftChartTitle", "RightChartTitle",
+                      "LeftChart", "RightChart"},
+        )
+        left = next(
+            el for el in document[0]["data"] if el["name"] == "LeftChart"
+        )
+        check(
+            "autodeck: left chart header is a date axis",
+            left["table"][0][0] is None
+            and left["table"][0][1] == {"date": "2024-01-01"},
+        )
+        check(
+            "autodeck: left chart series use 'percentage' cells",
+            left["table"][1][1] == {"percentage": 55},
+        )
+        right = next(
+            el for el in document[0]["data"] if el["name"] == "RightChart"
+        )
+        check(
+            "autodeck: right chart series use 'number' cells",
+            right["table"][1][1] == {"number": 0, "fill": "#ff0000"},
+        )
+        check(
+            "autodeck: title-only slide is allowed",
+            build_auto_deck(
+                [{"slide_title": "Just a title"}], "x"
+            )["success"],
+        )
+    else:
+        print("  SKIP: autodeck deck-building checks "
+              "(think-cell template unavailable)")
 
-    # The generated .ppttc must itself pass structural validation.
-    document = json.loads(open(result["ppttc_path"], encoding="utf-8").read())
-    check(
-        "autodeck: each slide is its own .ppttc entry",
-        isinstance(document, list) and len(document) == 2,
-    )
-    check(
-        "autodeck: generated .ppttc passes the validator",
-        validate_ppttc_data(document)["valid"],
-    )
-    names = {el["name"] for el in document[0]["data"]}
-    check(
-        "autodeck: uses the bundled named elements",
-        names == {"SlideTitle", "LeftChartTitle", "RightChartTitle",
-                  "LeftChart", "RightChart"},
-    )
-    left = next(el for el in document[0]["data"] if el["name"] == "LeftChart")
-    check(
-        "autodeck: left chart header is a date axis",
-        left["table"][0][0] is None
-        and left["table"][0][1] == {"date": "2024-01-01"},
-    )
-    check(
-        "autodeck: left chart series use 'percentage' cells",
-        left["table"][1][1] == {"percentage": 55},
-    )
-    right = next(
-        el for el in document[0]["data"] if el["name"] == "RightChart"
-    )
-    check(
-        "autodeck: right chart series use 'number' cells",
-        right["table"][1][1] == {"number": 0, "fill": "#ff0000"},
-    )
-
-    # -- input validation -------------------------------------------------
+    # -- input validation (template-independent) --------------------------
     check(
         "autodeck: empty slides list rejected",
         has(build_auto_deck([], "x")["errors"], "non-empty list"),
@@ -540,10 +561,6 @@ def test_autodeck() -> None:
     check(
         "autodeck: non-numeric series value rejected",
         has(build_auto_deck([bad_value], "x")["errors"], "must be a number"),
-    )
-    check(
-        "autodeck: title-only slide is allowed",
-        build_auto_deck([{"slide_title": "Just a title"}], "x")["success"],
     )
 
 

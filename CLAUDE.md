@@ -37,6 +37,13 @@
 
 <!-- Agrega nuevas entradas arriba de esta línea. -->
 
+- **2026-05-15 — CI con tests «CI-safe»:** `tests.py` es el gate, pero
+  `test_autodeck` necesitaba la plantilla de think-cell (ausente en CI). Fix:
+  `build_auto_deck` valida la entrada ANTES de `ensure_auto_template()`, y
+  `test_autodeck` salta solo los checks de construcción de deck si la
+  plantilla no está disponible (los de validación corren siempre). Workflow
+  en `.github/workflows/tests.yml` (Python 3.10 y 3.12). **Por qué importa:**
+  la métrica del loop corre sola en cada push/PR.
 - **2026-05-15 — `build_presentation` generaba un solo slide:** la librería
   `thinkcell` añade cada `add_chart`/`add_textfield` a `charts[-1]` (la última
   entrada de template). El código llamaba `add_template` una sola vez → todos
@@ -181,9 +188,8 @@ autoresearch prohíbe tocar):
 
 > Cola hacia adelante. Saca de aquí en el paso 1; añade ideas nuevas arriba.
 
-- [ ] CI: GitHub Actions que corra `python tests.py` en cada push/PR. Antes
-      hay que hacer los tests «CI-safe»: saltar los checks que dependen de la
-      plantilla local cuando no existe (ni think-cell ni la plantilla en CI).
+- [x] ~~CI: GitHub Actions que corra `python tests.py` en cada push/PR.~~
+      Hecho 2026-05-15: `.github/workflows/tests.yml`; tests hechos CI-safe.
 - [x] ~~`build_presentation` mete todos los gráficos en una sola entrada
       `.ppttc` → un solo slide.~~ Hecho 2026-05-15: `write_ppttc_slides` emite
       una entrada por slide.
