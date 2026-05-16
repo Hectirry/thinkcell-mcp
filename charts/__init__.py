@@ -10,7 +10,13 @@ from typing import Any
 
 from .area import AreaChart
 from .bar import BarChart
-from .base import ChartBuilder, ChartError, Table, write_ppttc_document
+from .base import (
+    ChartBuilder,
+    ChartError,
+    Table,
+    write_ppttc_document,
+    write_ppttc_slides,
+)
 from .combo import ComboChart
 from .line import LineChart
 from .mekko import MekkoChart
@@ -36,6 +42,7 @@ __all__ = [
     "ChartError",
     "Table",
     "write_ppttc_document",
+    "write_ppttc_slides",
     "get_builder",
     "chart_type_catalog",
 ]

@@ -37,6 +37,14 @@
 
 <!-- Agrega nuevas entradas arriba de esta línea. -->
 
+- **2026-05-15 — `build_presentation` generaba un solo slide:** la librería
+  `thinkcell` añade cada `add_chart`/`add_textfield` a `charts[-1]` (la última
+  entrada de template). El código llamaba `add_template` una sola vez → todos
+  los gráficos en una entrada → un solo slide. Fix: `write_ppttc_slides` llama
+  `add_template` una vez por slide; cada slide es su propia entrada `.ppttc`.
+  Los nombres pasan a ser únicos *por slide*, no globales. **Por qué importa:**
+  decks reales de N slides; `write_ppttc_document` quedó como wrapper de 1
+  slide sobre `write_ppttc_slides`.
 - **2026-05-15 — Re-branding de la plantilla sin romper la automatización:** el
   logo de think-cell es una imagen `<p:pic>` *visible* en `slideMaster1.xml`;
   sus datos van en `<p:pic>` *ocultos* (`hidden="1"`, tamaño 0). Los colores de
@@ -176,9 +184,9 @@ autoresearch prohíbe tocar):
 - [ ] CI: GitHub Actions que corra `python tests.py` en cada push/PR. Antes
       hay que hacer los tests «CI-safe»: saltar los checks que dependen de la
       plantilla local cuando no existe (ni think-cell ni la plantilla en CI).
-- [ ] `build_presentation` mete todos los gráficos en una sola entrada
-      `.ppttc` → un solo slide. Debería emitir una entrada por slide (como
-      `create_auto_deck`) para decks reales de N slides.
+- [x] ~~`build_presentation` mete todos los gráficos en una sola entrada
+      `.ppttc` → un solo slide.~~ Hecho 2026-05-15: `write_ppttc_slides` emite
+      una entrada por slide.
 - [ ] `create_auto_deck`: permitir ejes categóricos, no solo fechas ISO.
 - [ ] `CHANGELOG.md` + versionado semántico.
 - [ ] README: GIF o capturas de un deck generado.

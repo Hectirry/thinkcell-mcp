@@ -193,19 +193,27 @@ class ChartBuilder(ABC):
         return errors
 
 
-def write_ppttc_document(
+# One slide of a presentation: the chart builders on it plus any
+# (field_name, text) text-field pairs.
+Slide = tuple[list[ChartBuilder], list[tuple[str, str]]]
+
+
+def write_ppttc_slides(
     template: str,
-    builders: list[ChartBuilder],
+    slides: list[Slide],
     output_path: str | Path,
-    textfields: list[tuple[str, str]] | None = None,
 ) -> str:
-    """Assemble built charts into a ``.ppttc`` file via the thinkcell library.
+    """Assemble a multi-slide ``.ppttc`` file via the thinkcell library.
+
+    Each item in ``slides`` becomes one top-level ``.ppttc`` template entry,
+    and think-cell turns each entry into exactly one PowerPoint slide. (The
+    thinkcell library appends every chart to the most recently added template
+    entry, so one ``add_template`` call per slide is what separates them.)
 
     Args:
         template: Path/name of the think-cell PowerPoint template (.pptx).
-        builders: Validated chart builders to serialize, in order.
+        slides: One ``(builders, textfields)`` pair per slide, in order.
         output_path: Destination path for the ``.ppttc`` file.
-        textfields: Optional ``(field_name, text)`` pairs for template text.
 
     Returns:
         The absolute path to the written ``.ppttc`` file.
@@ -216,14 +224,15 @@ def write_ppttc_document(
     """
     document = Thinkcell()
     try:
-        document.add_template(template)
-        for builder in builders:
-            categories, series = builder.build_table()
-            document.add_chart(
-                template, builder.chart_name, categories, series
-            )
-        for field_name, text in textfields or []:
-            document.add_textfield(template, field_name, text)
+        for builders, textfields in slides:
+            document.add_template(template)
+            for builder in builders:
+                categories, series = builder.build_table()
+                document.add_chart(
+                    template, builder.chart_name, categories, series
+                )
+            for field_name, text in textfields or []:
+                document.add_textfield(template, field_name, text)
     except (ValueError, TypeError) as exc:
         raise ChartError(str(exc)) from exc
 
@@ -231,3 +240,19 @@ def write_ppttc_document(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     document.save_ppttc(str(out_path))
     return str(out_path.resolve())
+
+
+def write_ppttc_document(
+    template: str,
+    builders: list[ChartBuilder],
+    output_path: str | Path,
+    textfields: list[tuple[str, str]] | None = None,
+) -> str:
+    """Write a single-slide ``.ppttc`` file (one template entry).
+
+    Convenience wrapper over :func:`write_ppttc_slides` for the one-slide
+    case. Raises ``ChartError``/``OSError`` exactly as that function does.
+    """
+    return write_ppttc_slides(
+        template, [(builders, textfields or [])], output_path
+    )

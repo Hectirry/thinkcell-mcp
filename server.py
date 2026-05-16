@@ -30,6 +30,7 @@ from charts import (
     chart_type_catalog,
     get_builder,
     write_ppttc_document,
+    write_ppttc_slides,
 )
 from autodeck import AUTO_TEMPLATE_PATH, build_auto_deck, ensure_auto_template
 from branding import apply_branding
@@ -178,6 +179,10 @@ def build_presentation(
 ) -> dict[str, Any]:
     """Combine multiple charts across multiple slides into one ``.ppttc`` file.
 
+    Each slide becomes its own top-level ``.ppttc`` entry, which think-cell
+    renders as one PowerPoint slide -- so an N-slide ``slides`` list yields an
+    N-slide deck.
+
     Args:
         slides: Non-empty list of slide objects. Each slide has a ``title``
             string and a non-empty ``charts`` list. Each chart entry is an
@@ -186,8 +191,9 @@ def build_presentation(
             match the named think-cell element in the template; when omitted,
             the names Chart1, Chart2, ... are assigned in order. A slide title
             is published as a text field named ``title_field`` if given, else
-            ``Title1``, ``Title2``, ... Every chart name and text-field name
-            must be unique across the whole presentation.
+            ``Title1``, ``Title2``, ... Chart and text-field names must be
+            unique *within a slide*; different slides may reuse the same name
+            (each slide is a separate ``.ppttc`` entry).
         template_path: Path to the think-cell PowerPoint template (.pptx)
             that contains every named chart (and any text fields).
         output_name: Filename stem for the generated ``.ppttc`` file.
@@ -213,30 +219,29 @@ def build_presentation(
         return {"success": False, "ppttc_path": None, "errors": [template_issue]}
 
     errors: list[str] = []
-    builders: list[ChartBuilder] = []
-    textfields: list[tuple[str, str]] = []
-    used_names: set[str] = set()
-    textfield_names: set[str] = set()
-    auto_index = 1
+    # One (builders, textfields) group per slide -> one .ppttc entry each.
+    slide_groups: list[tuple[list[ChartBuilder], list[tuple[str, str]]]] = []
+    chart_count = 0
 
     for slide_index, slide in enumerate(slides):
         if not isinstance(slide, dict):
             errors.append(f"slides[{slide_index}] must be an object")
             continue
 
+        # Names are scoped per slide: each slide is its own .ppttc entry,
+        # so a name only has to be unique within that slide.
+        slide_builders: list[ChartBuilder] = []
+        slide_textfields: list[tuple[str, str]] = []
+        used_names: set[str] = set()
+        auto_index = 1
+
         slide_title = slide.get("title", "")
         if slide_title:
             field_name = str(
                 slide.get("title_field") or f"Title{slide_index + 1}"
             )
-            if field_name in textfield_names:
-                errors.append(
-                    f"slides[{slide_index}] reuses title_field "
-                    f"'{field_name}'; text-field names must be unique"
-                )
-            else:
-                textfield_names.add(field_name)
-                textfields.append((field_name, str(slide_title)))
+            used_names.add(field_name)
+            slide_textfields.append((field_name, str(slide_title)))
 
         charts = slide.get("charts")
         if not isinstance(charts, list) or len(charts) == 0:
@@ -262,7 +267,7 @@ def build_presentation(
                 )
                 continue
 
-            # Resolve a unique chart name (explicit or auto-assigned).
+            # Resolve a name unique within this slide (explicit or assigned).
             chart_name = config.get("chart_name")
             if not chart_name:
                 while f"Chart{auto_index}" in used_names:
@@ -271,8 +276,8 @@ def build_presentation(
             chart_name = str(chart_name)
             if chart_name in used_names:
                 errors.append(
-                    f"{where} reuses chart_name '{chart_name}'; chart names "
-                    f"must be unique within a presentation"
+                    f"{where} reuses the name '{chart_name}'; chart and "
+                    f"text-field names must be unique within a slide"
                 )
                 continue
             used_names.add(chart_name)
@@ -301,23 +306,17 @@ def build_presentation(
             if chart_errors:
                 errors.extend(f"{where}: {error}" for error in chart_errors)
                 continue
-            builders.append(builder)
+            slide_builders.append(builder)
 
-    clashes = used_names & textfield_names
-    if clashes:
-        errors.append(
-            f"name(s) {sorted(clashes)} are used by both a chart and a text "
-            f"field; every named template element must have a unique name"
-        )
+        slide_groups.append((slide_builders, slide_textfields))
+        chart_count += len(slide_builders)
 
     if errors:
         return {"success": False, "ppttc_path": None, "errors": errors}
 
     out_path = OUTPUT_DIR / f"{_safe_filename(output_name, 'presentation')}.ppttc"
     try:
-        written = write_ppttc_document(
-            template_path, builders, out_path, textfields=textfields
-        )
+        written = write_ppttc_slides(template_path, slide_groups, out_path)
     except ChartError as exc:
         return {
             "success": False,
@@ -335,7 +334,7 @@ def build_presentation(
         "success": True,
         "ppttc_path": written,
         "slide_count": len(slides),
-        "chart_count": len(builders),
+        "chart_count": chart_count,
         "template": template_path,
         "errors": [],
     }

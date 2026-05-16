@@ -624,6 +624,73 @@ def test_server_smoke() -> None:
         check(f"server: tool '{name}' is defined", hasattr(server, name))
 
 
+# --------------------------------------------------------------------------
+# build_presentation: one .ppttc entry per slide
+# --------------------------------------------------------------------------
+def test_build_presentation() -> None:
+    import server
+
+    rows = [{"category": "A", "V": 1}, {"category": "B", "V": 2}]
+    result = server.build_presentation(
+        slides=[
+            {"title": "Slide One", "charts": [
+                {"chart_type": "bar", "chart_name": "C1", "data": rows}]},
+            {"title": "Slide Two", "charts": [
+                {"chart_type": "line", "chart_name": "C2", "data": rows}]},
+        ],
+        template_path="deck.pptx",
+        output_name="_test_buildpres",
+    )
+    check("build_presentation: two-slide deck succeeds", result["success"])
+    check("build_presentation: slide_count is 2", result.get("slide_count") == 2)
+    check("build_presentation: chart_count is 2", result.get("chart_count") == 2)
+
+    document = json.loads(open(result["ppttc_path"], encoding="utf-8").read())
+    check(
+        "build_presentation: one .ppttc entry per slide (not all on one)",
+        isinstance(document, list) and len(document) == 2,
+    )
+    check(
+        "build_presentation: slide 1 entry holds only its own elements",
+        {e["name"] for e in document[0]["data"]} == {"Title1", "C1"},
+    )
+    check(
+        "build_presentation: slide 2 entry holds only its own elements",
+        {e["name"] for e in document[1]["data"]} == {"Title2", "C2"},
+    )
+
+    # A name may repeat across slides -- each slide is a separate entry.
+    across = server.build_presentation(
+        slides=[
+            {"charts": [{"chart_type": "bar", "chart_name": "Chart1",
+                         "data": [{"category": "A", "V": 1}]}]},
+            {"charts": [{"chart_type": "bar", "chart_name": "Chart1",
+                         "data": [{"category": "A", "V": 2}]}]},
+        ],
+        template_path="deck.pptx",
+        output_name="_test_buildpres_across",
+    )
+    check(
+        "build_presentation: same name on different slides is allowed",
+        across["success"],
+    )
+
+    # Within one slide a duplicate name is still rejected.
+    dup = server.build_presentation(
+        slides=[{"charts": [
+            {"chart_type": "bar", "chart_name": "X",
+             "data": [{"category": "A", "V": 1}]},
+            {"chart_type": "bar", "chart_name": "X",
+             "data": [{"category": "A", "V": 2}]}]}],
+        template_path="deck.pptx",
+        output_name="_test_buildpres_dup",
+    )
+    check(
+        "build_presentation: duplicate name within a slide rejected",
+        not dup["success"] and has(dup["errors"], "unique within a slide"),
+    )
+
+
 def main() -> int:
     suites = [
         test_registry,
@@ -639,6 +706,7 @@ def main() -> int:
         test_autodeck,
         test_branding,
         test_server_smoke,
+        test_build_presentation,
     ]
     for suite in suites:
         suite()
