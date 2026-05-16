@@ -356,9 +356,8 @@ def create_auto_deck(
 
     Every slide has the same fixed layout: a slide title, plus a left and a
     right chart, each with its own title. All fields are optional, but a slide
-    must carry at least one. Both charts use a **date axis** (categories are
-    ISO dates). The left chart renders ``percentage`` values; the right chart
-    renders plain ``number`` values.
+    must carry at least one. The left chart renders ``percentage`` values; the
+    right chart renders plain ``number`` values.
 
     Args:
         slides: Non-empty list of slide objects. Each slide object accepts:
@@ -371,8 +370,9 @@ def create_auto_deck(
 
             A chart object has:
 
-            * ``categories`` (list[str]): non-empty list of ISO dates
-              (``"YYYY-MM-DD"``) forming the x-axis.
+            * ``categories`` (list[str]): non-empty list of x-axis labels.
+              When every label is an ISO date (``"YYYY-MM-DD"``) the chart
+              gets a date axis; otherwise the labels form a category axis.
             * ``series`` (list[object]): non-empty list of data series. Each
               series object has ``name`` (str), ``values`` (list of numbers,
               one per category) and an optional ``fill`` (hex colour like

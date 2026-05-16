@@ -15,7 +15,12 @@ import json
 import re
 import sys
 
-from autodeck import AUTO_TEMPLATE_PATH, build_auto_deck, ensure_auto_template
+from autodeck import (
+    AUTO_TEMPLATE_PATH,
+    _validate_chart,
+    build_auto_deck,
+    ensure_auto_template,
+)
 from branding import (
     DEFAULT_ACCENTS,
     apply_branding,
@@ -518,17 +523,6 @@ def test_autodeck() -> None:
         "autodeck: a slide with no content is rejected",
         has(build_auto_deck([{}], "x")["errors"], "no content"),
     )
-    bad_date = {
-        "slide_title": "T",
-        "left_chart": {
-            "categories": ["Jan 2024"],
-            "series": [{"name": "S", "values": [1]}],
-        },
-    }
-    check(
-        "autodeck: non-ISO category date rejected",
-        has(build_auto_deck([bad_date], "x")["errors"], "ISO date"),
-    )
     length_mismatch = {
         "slide_title": "T",
         "left_chart": {
@@ -561,6 +555,79 @@ def test_autodeck() -> None:
     check(
         "autodeck: non-numeric series value rejected",
         has(build_auto_deck([bad_value], "x")["errors"], "must be a number"),
+    )
+
+    # -- _validate_chart: date vs. string category axes -------------------
+    # _validate_chart is template-independent: it just returns (errors, table).
+    str_errors, str_table = _validate_chart(
+        {"categories": ["Q1", "Q2"],
+         "series": [{"name": "Rev", "values": [10, 20]}]},
+        "chart", "number",
+    )
+    check("autodeck: string categories are valid", str_errors == [])
+    check(
+        "autodeck: string categories emit 'string' header cells",
+        str_table is not None
+        and str_table[0] == [None, {"string": "Q1"}, {"string": "Q2"}],
+    )
+
+    date_errors, date_table = _validate_chart(
+        {"categories": ["2024-01-01", "2025-01-01"],
+         "series": [{"name": "Rev", "values": [10, 20]}]},
+        "chart", "number",
+    )
+    check("autodeck: ISO-date categories are valid", date_errors == [])
+    check(
+        "autodeck: ISO-date categories emit 'date' header cells (regression)",
+        date_table is not None
+        and date_table[0] == [None, {"date": "2024-01-01"},
+                              {"date": "2025-01-01"}],
+    )
+
+    # A single non-ISO entry tips the whole axis to a string axis.
+    mixed_errors, mixed_table = _validate_chart(
+        {"categories": ["2024-01-01", "Forecast"],
+         "series": [{"name": "Rev", "values": [10, 20]}]},
+        "chart", "number",
+    )
+    check("autodeck: mixed categories are valid", mixed_errors == [])
+    check(
+        "autodeck: any non-ISO category makes it a 'string' axis",
+        mixed_table is not None
+        and mixed_table[0] == [None, {"string": "2024-01-01"},
+                               {"string": "Forecast"}],
+    )
+
+    empty_str_errors, empty_str_table = _validate_chart(
+        {"categories": ["Q1", ""],
+         "series": [{"name": "Rev", "values": [10, 20]}]},
+        "chart", "number",
+    )
+    check(
+        "autodeck: empty-string category is rejected",
+        empty_str_table is None
+        and has(empty_str_errors, "must be a non-empty string"),
+    )
+
+    nonstr_errors, nonstr_table = _validate_chart(
+        {"categories": [2024],
+         "series": [{"name": "Rev", "values": [10]}]},
+        "chart", "number",
+    )
+    check(
+        "autodeck: non-string category is rejected",
+        nonstr_table is None
+        and has(nonstr_errors, "must be a non-empty string"),
+    )
+
+    empty_cats_errors, empty_cats_table = _validate_chart(
+        {"categories": [], "series": [{"name": "Rev", "values": []}]},
+        "chart", "number",
+    )
+    check(
+        "autodeck: empty categories list is rejected",
+        empty_cats_table is None
+        and has(empty_cats_errors, "non-empty list"),
     )
 
 

@@ -14,9 +14,13 @@ Element name        Purpose
 ``SlideTitle``      Slide title text field.
 ``LeftChartTitle``  Title text field above the left chart.
 ``RightChartTitle`` Title text field above the right chart.
-``LeftChart``       Left chart -- date axis, ``percentage`` series.
-``RightChart``      Right chart -- date axis, ``number`` series.
+``LeftChart``       Left chart -- date or category axis, ``percentage`` series.
+``RightChart``      Right chart -- date or category axis, ``number`` series.
 ==================  ==========================================================
+
+A chart's ``categories`` may be either ISO dates (``YYYY-MM-DD`` -- a date
+axis) or plain non-empty strings (a category axis); the axis kind is inferred
+per chart from whether *every* category matches the ISO date pattern.
 
 Because those names are fixed and known, the user never has to open
 PowerPoint: they just provide data. :func:`build_auto_deck` turns a list of
@@ -90,7 +94,8 @@ RIGHT_TITLE_NAME = "RightChartTitle"
 LEFT_CHART_NAME = "LeftChart"
 RIGHT_CHART_NAME = "RightChart"
 
-# Accepted ISO-ish date pattern for chart category axes (YYYY-MM-DD).
+# ISO-ish date pattern (YYYY-MM-DD). A chart whose categories ALL match this
+# gets a date axis; otherwise the categories are treated as a string axis.
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 # Hex colour accepted on a series' optional "fill".
@@ -115,6 +120,11 @@ def _validate_chart(
 ) -> tuple[list[str], list[list[Any]] | None]:
     """Validate one chart definition and build its ``.ppttc`` table.
 
+    Each category must be a non-empty string. If *every* category matches the
+    ISO date pattern (``YYYY-MM-DD``) the chart gets a date axis (``date``
+    header cells); otherwise the categories form a string axis (``string``
+    header cells).
+
     Args:
         chart: The chart object: ``{"categories": [...], "series": [...]}``.
         where: Location label for error messages.
@@ -130,14 +140,17 @@ def _validate_chart(
 
     categories = chart.get("categories")
     if not isinstance(categories, list) or len(categories) == 0:
-        errors.append(f"{where}.categories must be a non-empty list of dates")
+        errors.append(
+            f"{where}.categories must be a non-empty list of strings "
+            "(ISO dates 'YYYY-MM-DD' for a date axis, or plain labels)"
+        )
         categories = []
     else:
         for i, category in enumerate(categories):
-            if not isinstance(category, str) or not _DATE_RE.match(category):
+            if not isinstance(category, str) or not category:
                 errors.append(
-                    f"{where}.categories[{i}] must be an ISO date string "
-                    f"'YYYY-MM-DD', got {category!r}"
+                    f"{where}.categories[{i}] must be a non-empty string, "
+                    f"got {category!r}"
                 )
 
     series = chart.get("series")
@@ -194,7 +207,9 @@ def _validate_chart(
     if errors:
         return errors, None
 
-    header: list[Any] = [None] + [{"date": c} for c in categories]
+    # Date axis only when EVERY category is an ISO date; else a string axis.
+    cell_key = "date" if all(_DATE_RE.match(c) for c in categories) else "string"
+    header: list[Any] = [None] + [{cell_key: c} for c in categories]
     table: list[list[Any]] = [header]
     table.extend(parsed_series)
     return [], table
