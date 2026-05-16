@@ -37,6 +37,11 @@
 
 <!-- Agrega nuevas entradas arriba de esta línea. -->
 
+- **2026-05-16 — `create_auto_deck` acepta ejes categóricos:** `_validate_chart`
+  ya no exige fechas ISO. Si TODAS las categorías de un gráfico son
+  `YYYY-MM-DD` → eje de fechas (celdas `date`); si no → eje categórico (celdas
+  `string`). Se infiere por gráfico. **Por qué importa:** decks con ejes
+  "Q1/Q2", regiones, segmentos, etc., no solo series temporales.
 - **2026-05-15 — CI con tests «CI-safe»:** `tests.py` es el gate, pero
   `test_autodeck` necesitaba la plantilla de think-cell (ausente en CI). Fix:
   `build_auto_deck` valida la entrada ANTES de `ensure_auto_template()`, y
@@ -193,9 +198,14 @@ autoresearch prohíbe tocar):
 - [x] ~~`build_presentation` mete todos los gráficos en una sola entrada
       `.ppttc` → un solo slide.~~ Hecho 2026-05-15: `write_ppttc_slides` emite
       una entrada por slide.
-- [ ] `create_auto_deck`: permitir ejes categóricos, no solo fechas ISO.
-- [ ] `CHANGELOG.md` + versionado semántico.
-- [ ] README: GIF o capturas de un deck generado.
+- [x] ~~`create_auto_deck`: permitir ejes categóricos, no solo fechas ISO.~~
+      Hecho 2026-05-16: `_validate_chart` infiere eje de fecha vs categórico.
+- [x] ~~`CHANGELOG.md` + versionado semántico.~~ Hecho 2026-05-16:
+      `CHANGELOG.md` (formato Keep a Changelog), v0.1.0.
+- [x] ~~CI: actualizar `actions/checkout` y `actions/setup-python` a v6~~
+      (cierra el aviso de Node 20). Hecho 2026-05-16.
+- [ ] README: GIF o capturas de un deck generado. El *quickstart* en texto ya
+      está; el GIF/capturas requieren un humano con un deck renderizado.
 
 ## Organización de archivos
 
