@@ -138,6 +138,51 @@ nombres no coinciden, `ppttc.exe` corre pero no actualiza nada.
 4. **Actualiza la documentación a medida que aprendes.** README y esta sección
    de aprendizajes son documentos vivos. No los descartes; mejóralos.
 
+## Loop de mejora continua (patrón autoresearch)
+
+Inspirado en [`karpathy/autoresearch`](https://github.com/karpathy/autoresearch):
+el proyecto no avanza con mejoras sueltas, sino con un **loop explícito** —
+cada vuelta acotada, pequeña y verificada por una métrica única.
+
+**La métrica.** `python tests.py` debe dar **100%**. Es el único *gate*: si no
+está verde, el repo no avanza. Equivale al `val_bpb` de autoresearch — una
+señal objetiva, reproducible, de una sola orden.
+
+**El loop — cada vuelta:**
+
+1. Elige UN ítem del Backlog (mayor valor / menor riesgo primero).
+2. Impleméntalo con un cambio pequeño y acotado.
+3. Añade o actualiza tests en `tests.py` que cubran el cambio.
+4. Corre `python tests.py`. Si no es 100%: corrige o revierte. **Nunca dejes
+   el repo en rojo.**
+5. Registra una entrada en «Registro de aprendizajes».
+6. Haz un commit pequeño y enfocado; marca el ítem del Backlog como hecho.
+7. Repite.
+
+**Invariantes — el loop NUNCA debe romperlos** (equivalen al `prepare.py` que
+autoresearch prohíbe tocar):
+
+- Los 8 tools MCP siguen registrados e importables (`test_server_smoke`).
+- No se redistribuyen archivos de think-cell: la plantilla se copia del
+  install local.
+- Toda herramienta devuelve dicts estructurados; nunca lanza excepción para
+  fallos documentados.
+- Sin rutas ni datos personales en el repo.
+
+### Backlog de mejoras
+
+> Cola hacia adelante. Saca de aquí en el paso 1; añade ideas nuevas arriba.
+
+- [ ] CI: GitHub Actions que corra `python tests.py` en cada push/PR. Antes
+      hay que hacer los tests «CI-safe»: saltar los checks que dependen de la
+      plantilla local cuando no existe (ni think-cell ni la plantilla en CI).
+- [ ] `build_presentation` mete todos los gráficos en una sola entrada
+      `.ppttc` → un solo slide. Debería emitir una entrada por slide (como
+      `create_auto_deck`) para decks reales de N slides.
+- [ ] `create_auto_deck`: permitir ejes categóricos, no solo fechas ISO.
+- [ ] `CHANGELOG.md` + versionado semántico.
+- [ ] README: GIF o capturas de un deck generado.
+
 ## Organización de archivos
 
 ```

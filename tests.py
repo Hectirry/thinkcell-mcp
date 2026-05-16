@@ -609,6 +609,21 @@ def test_branding() -> None:
     )
 
 
+# --------------------------------------------------------------------------
+# server: every MCP tool is importable (the eval's invariant check)
+# --------------------------------------------------------------------------
+def test_server_smoke() -> None:
+    import server
+
+    tools = [
+        "create_chart", "build_presentation", "create_auto_deck",
+        "set_deck_branding", "convert_to_pptx", "validate_ppttc",
+        "list_chart_types", "diagnose_thinkcell",
+    ]
+    for name in tools:
+        check(f"server: tool '{name}' is defined", hasattr(server, name))
+
+
 def main() -> int:
     suites = [
         test_registry,
@@ -623,6 +638,7 @@ def main() -> int:
         test_validator_percentage,
         test_autodeck,
         test_branding,
+        test_server_smoke,
     ]
     for suite in suites:
         suite()
